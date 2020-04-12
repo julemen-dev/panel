@@ -392,7 +392,7 @@ class ServerRepository extends EloquentRepository implements ServerRepositoryInt
     public function loadEveryServerForNode(int $node)
     {
         return $this->getBuilder()
-            ->with('nest')
+            ->with('nest', 'mounts')
             ->where('node_id', '=', $node)
             ->get();
     }

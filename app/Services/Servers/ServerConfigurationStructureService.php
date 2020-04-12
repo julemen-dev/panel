@@ -101,6 +101,7 @@ class ServerConfigurationStructureService
                 ],
                 'mappings' => $server->getAllocationMappings(),
             ],
+            'mounts' => $server->mounts,
         ];
     }
 
