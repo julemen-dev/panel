@@ -161,6 +161,20 @@ class ServerViewController extends Controller
     }
 
     /**
+     * Returns all of the mounts that exist for the server.
+     *
+     * @param \Illuminate\Http\Request $request
+     * @param \Pterodactyl\Models\Server $server
+     * @return \Illuminate\Contracts\View\View
+     */
+    public function mounts(Request $request, Server $server)
+    {
+        return $this->view->make('admin.servers.view.mounts', [
+            'server' => $server,
+        ]);
+    }
+
+    /**
      * Returns the base server management page, or an exception if the server
      * is in a state that cannot be recovered from.
      *
