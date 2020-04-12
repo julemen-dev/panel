@@ -38,16 +38,18 @@
                             <th></th>
                         </tr>
 
-                        <tr>
-                            <td><code>/srv/mounts/whatever</code></td>
-                            <td><code>/home/share/mount1</code></td>
-                            <td><code>false</code></td>
-                            <td>Bind</td>
+                        @foreach ($server->mounts as $mount)
+                            <tr>
+                                <td><code>{{ $mount->source }}</code></td>
+                                <td><code>{{ $mount->target }}</code></td>
+                                <td><code>{{ ($mount->readonly) ? 'true' : 'false' }}</code></td>
+                                <td>{{ $mount->type }}</td>
 
-                            <td class="text-center">
-                                <button data-action="remove" data-id="" class="btn btn-xs btn-danger"><i class="fa fa-trash"></i></button>
-                            </td>
-                        </tr>
+                                <td class="text-center">
+                                    <button data-action="remove" data-id="{{ $mount->id }}" class="btn btn-xs btn-danger"><i class="fa fa-trash"></i></button>
+                                </td>
+                            </tr>
+                        @endforeach
                     </table>
                 </div>
             </div>
@@ -59,7 +61,7 @@
                     <h3 class="box-title">Add Mount</h3>
                 </div>
 
-                <form action="{{ route('admin.servers.view.database', $server->id) }}" method="POST">
+                <form action="{{ route('admin.servers.view.mounts', $server->id) }}" method="POST">
                     <div class="box-body">
                         <div class="form-group">
                             <label for="pSource" class="control-label">Source</label>
@@ -77,13 +79,13 @@
                             <label for="pReadOnly" class="control-label">Read Only</label>
 
                             <div>
-                                <div class="radio radio-danger radio-inline">
-                                    <input type="radio" id="pReadOnly" name="readonly" value="0">
+                                <div class="radio radio-success radio-inline">
+                                    <input type="radio" id="pReadOnly_enabled" name="readonly" value="0">
                                     <label for="pReadOnly">Enabled</label>
                                 </div>
 
-                                <div class="radio radio-success radio-inline">
-                                    <input type="radio" id="pReadOnly" name="readonly" value="1" checked>
+                                <div class="radio radio-danger radio-inline">
+                                    <input type="radio" id="pReadOnly_disabled" name="readonly" value="1" checked>
                                     <label for="pReadOnly">Disabled</label>
                                 </div>
 
@@ -115,4 +117,37 @@
 
 @section('footer-scripts')
     @parent
+
+    <script>
+        $('[data-action="remove"]').click(function (event) {
+            event.preventDefault();
+            var self = $(this);
+            swal({
+                title: '',
+                type: 'warning',
+                text: 'Are you sure that you want to delete this mount?',
+                showCancelButton: true,
+                confirmButtonText: 'Delete',
+                confirmButtonColor: '#d9534f',
+                closeOnConfirm: false,
+                showLoaderOnConfirm: true,
+            }, function () {
+                $.ajax({
+                    method: 'DELETE',
+                    url: '/admin/servers/view/{{ $server->id }}/mounts/' + self.data('id') + '/delete',
+                    headers: { 'X-CSRF-TOKEN': $('meta[name="_token"]').attr('content') },
+                }).done(function () {
+                    self.parent().parent().slideUp();
+                    swal.close();
+                }).fail(function (jqXHR) {
+                    console.error(jqXHR);
+                    swal({
+                        type: 'error',
+                        title: 'Whoops!',
+                        text: (typeof jqXHR.responseJSON.error !== 'undefined') ? jqXHR.responseJSON.error : 'An error occurred while processing this request.',
+                    });
+                });
+            });
+        });
+    </script>
 @endsection

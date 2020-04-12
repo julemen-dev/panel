@@ -359,4 +359,12 @@ class Server extends Model
     {
         return $this->hasMany(Backup::class);
     }
+
+    /**
+     * @return \Illuminate\Database\Eloquent\Relations\HasMany
+     */
+    public function mounts()
+    {
+        return $this->hasMany(ServerMount::class);
+    }
 }

@@ -183,7 +183,6 @@ class ServerViewController extends Controller
      * @return \Illuminate\Contracts\View\View
      *
      * @throws \Pterodactyl\Exceptions\DisplayException
-     * @throws \Pterodactyl\Exceptions\Repository\RecordNotFoundException
      */
     public function manage(Request $request, Server $server)
     {

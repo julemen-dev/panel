@@ -10,11 +10,15 @@
 namespace Pterodactyl\Http\Controllers\Admin;
 
 use Illuminate\Http\Request;
+use Pterodactyl\Http\Requests\Admin\Servers\StoreServerMountRequest;
+use Pterodactyl\Models\ServerMount;
+use Pterodactyl\Models\ServerTransfer;
 use Pterodactyl\Models\User;
 use Pterodactyl\Models\Server;
 use Prologue\Alerts\AlertsMessageBag;
 use Pterodactyl\Exceptions\DisplayException;
 use Pterodactyl\Http\Controllers\Controller;
+use Pterodactyl\Repositories\Eloquent\ServerMountRepository;
 use Pterodactyl\Services\Servers\SuspensionService;
 use Pterodactyl\Services\Servers\ServerDeletionService;
 use Pterodactyl\Services\Servers\ReinstallServerService;
@@ -89,6 +93,11 @@ class ServersController extends Controller
     protected $nestRepository;
 
     /**
+     * @var \Pterodactyl\Repositories\Eloquent\ServerMountRepository
+     */
+    protected $serverMountRepository;
+
+    /**
      * @var \Pterodactyl\Services\Servers\ReinstallServerService
      */
     protected $reinstallService;
@@ -121,6 +130,7 @@ class ServersController extends Controller
      * @param \Pterodactyl\Repositories\Eloquent\DatabaseHostRepository $databaseHostRepository
      * @param \Pterodactyl\Services\Servers\ServerDeletionService $deletionService
      * @param \Pterodactyl\Services\Servers\DetailsModificationService $detailsModificationService
+     * @param \Pterodactyl\Repositories\Eloquent\ServerMountRepository $serverMountRepository
      * @param \Pterodactyl\Services\Servers\ReinstallServerService $reinstallService
      * @param \Pterodactyl\Contracts\Repository\ServerRepositoryInterface $repository
      * @param \Pterodactyl\Contracts\Repository\NestRepositoryInterface $nestRepository
@@ -138,6 +148,7 @@ class ServersController extends Controller
         DatabaseHostRepository $databaseHostRepository,
         ServerDeletionService $deletionService,
         DetailsModificationService $detailsModificationService,
+        ServerMountRepository $serverMountRepository,
         ReinstallServerService $reinstallService,
         ServerRepositoryInterface $repository,
         NestRepositoryInterface $nestRepository,
@@ -155,6 +166,7 @@ class ServersController extends Controller
         $this->detailsModificationService = $detailsModificationService;
         $this->deletionService = $deletionService;
         $this->nestRepository = $nestRepository;
+        $this->serverMountRepository = $serverMountRepository;
         $this->reinstallService = $reinstallService;
         $this->repository = $repository;
         $this->startupModificationService = $startupModificationService;
@@ -214,9 +226,7 @@ class ServersController extends Controller
      * @param \Pterodactyl\Models\Server $server
      * @return \Illuminate\Http\RedirectResponse
      *
-     * @throws \Pterodactyl\Exceptions\DisplayException
-     * @throws \Pterodactyl\Exceptions\Model\DataValidationException
-     * @throws \Pterodactyl\Exceptions\Repository\RecordNotFoundException
+     * @throws \Throwable
      */
     public function reinstallServer(Server $server)
     {
@@ -233,9 +243,7 @@ class ServersController extends Controller
      * @param \Pterodactyl\Models\Server $server
      * @return \Illuminate\Http\RedirectResponse
      *
-     * @throws \Pterodactyl\Exceptions\DisplayException
-     * @throws \Pterodactyl\Exceptions\Model\DataValidationException
-     * @throws \Pterodactyl\Exceptions\Repository\RecordNotFoundException
+     * @throws \Throwable
      */
     public function manageSuspension(Request $request, Server $server)
     {
@@ -329,6 +337,31 @@ class ServersController extends Controller
     }
 
     /**
+     * Creates a new mount assigned to a specific server.
+     *
+     * @param \Pterodactyl\Http\Requests\Admin\Servers\StoreServerMountRequest $request
+     * @param int $server
+     * @return \Illuminate\Http\RedirectResponse
+     *
+     * @throws \Exception
+     */
+    public function newMount(StoreServerMountRequest $request, $server)
+    {
+        $mount = new ServerMount;
+
+        $mount->server_id = $server;
+        $mount->source = $request->input('source');
+        $mount->target = $request->input('target');
+        $mount->readonly = $request->input('readonly');
+        $mount->type = $request->input('type');
+
+        $mount->save();
+
+        $this->alert->success('New mount has been created.')->flash();
+        return redirect()->route('admin.servers.view.mounts', $server)->withInput();
+    }
+
+    /**
      * Resets the database password for a specific database on this server.
      *
      * @param \Illuminate\Http\Request $request
@@ -354,10 +387,9 @@ class ServersController extends Controller
      *
      * @param int $server
      * @param int $database
-     * @return \Illuminate\Http\RedirectResponse
+     * @return \Illuminate\Http\Response
      *
      * @throws \Exception
-     * @throws \Pterodactyl\Exceptions\Model\DataValidationException
      */
     public function deleteDatabase($server, $database)
     {
@@ -367,6 +399,27 @@ class ServersController extends Controller
         ]);
 
         $this->databaseManagementService->delete($database->id);
+
+        return response('', 204);
+    }
+
+    /**
+     * Deletes a mount from a server.
+     *
+     * @param int $server
+     * @param int $mount
+     * @return \Illuminate\Http\Response
+     *
+     * @throws \Exception
+     */
+    public function deleteMount($server, $mount)
+    {
+        $mount = $this->serverMountRepository->findFirstWhere([
+            ['server_id', '=', $server],
+            ['id', '=', $mount],
+        ]);
+
+        $this->serverMountRepository->delete($mount->id);
 
         return response('', 204);
     }
