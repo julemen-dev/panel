@@ -6,10 +6,12 @@ import { faCircle } from '@fortawesome/free-solid-svg-icons/faCircle';
 import classNames from 'classnames';
 import { faMemory } from '@fortawesome/free-solid-svg-icons/faMemory';
 import { faMicrochip } from '@fortawesome/free-solid-svg-icons/faMicrochip';
+import { faHdd } from '@fortawesome/free-solid-svg-icons/faHdd';
 import { bytesToHuman } from '@/helpers';
 import SuspenseSpinner from '@/components/elements/SuspenseSpinner';
 import TitledGreyBox from '@/components/elements/TitledGreyBox';
 import Can from '@/components/elements/Can';
+import PageContentBlock from '@/components/elements/PageContentBlock';
 
 type PowerAction = 'start' | 'stop' | 'restart' | 'kill';
 
@@ -42,6 +44,7 @@ const StopOrKillButton = ({ onPress }: { onPress: (action: PowerAction) => void 
 export default () => {
     const [ memory, setMemory ] = useState(0);
     const [ cpu, setCpu ] = useState(0);
+    const [ disk, setDisk ] = useState(0);
 
     const server = ServerContext.useStoreState(state => state.server.data!);
     const status = ServerContext.useStoreState(state => state.status.value);
@@ -58,6 +61,7 @@ export default () => {
 
         setMemory(stats.memory_bytes);
         setCpu(stats.cpu_absolute);
+        setDisk(stats.disk_bytes);
     };
 
     const sendPowerCommand = (command: PowerAction) => {
@@ -77,7 +81,7 @@ export default () => {
     }, [ instance, connected ]);
 
     return (
-        <div className={'my-10 flex'}>
+        <PageContentBlock className={'flex'}>
             <div className={'w-1/4'}>
                 <TitledGreyBox title={server.name} icon={faServer}>
                     <p className={'text-xs uppercase'}>
@@ -94,20 +98,29 @@ export default () => {
                     </p>
                     <p className={'text-xs mt-2'}>
                         <FontAwesomeIcon
-                            icon={faMemory}
-                            fixedWidth={true}
-                            className={'mr-1'}
-                        />
-                        &nbsp;{bytesToHuman(memory)}
-                        <span className={'text-neutral-500'}>/ {server.limits.memory} MB</span>
-                    </p>
-                    <p className={'text-xs mt-2'}>
-                        <FontAwesomeIcon
                             icon={faMicrochip}
                             fixedWidth={true}
                             className={'mr-1'}
                         />
                         &nbsp;{cpu.toFixed(2)} %
+                    </p>
+                    <p className={'text-xs mt-2'}>
+                        <FontAwesomeIcon
+                            icon={faMemory}
+                            fixedWidth={true}
+                            className={'mr-1'}
+                        />
+                        &nbsp;{bytesToHuman(memory)}
+                        <span className={'text-neutral-500'}> / {server.limits.memory} MB</span>
+                    </p>
+                    <p className={'text-xs mt-2'}>
+                        <FontAwesomeIcon
+                            icon={faHdd}
+                            fixedWidth={true}
+                            className={'mr-1'}
+                        />
+                        &nbsp;{bytesToHuman(disk)}
+                        <span className={'text-neutral-500'}> / {server.limits.disk} MB</span>
                     </p>
                 </TitledGreyBox>
                 <Can action={[ 'control.start', 'control.stop', 'control.restart' ]} matchAny={true}>
@@ -141,12 +154,12 @@ export default () => {
                     </div>
                 </Can>
             </div>
-            <div className={'flex-1 mx-4 mr-4'}>
+            <div className={'flex-1 ml-4'}>
                 <SuspenseSpinner>
                     <ChunkedConsole/>
                     <ChunkedStatGraphs/>
                 </SuspenseSpinner>
             </div>
-        </div>
+        </PageContentBlock>
     );
 };

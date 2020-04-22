@@ -12,6 +12,9 @@ import { FileObject } from '@/api/server/files/loadDirectory';
 import NewDirectoryButton from '@/components/server/files/NewDirectoryButton';
 import { Link } from 'react-router-dom';
 import Can from '@/components/elements/Can';
+import PageContentBlock from '@/components/elements/PageContentBlock';
+import ServerError from '@/components/screens/ServerError';
+import useRouter from 'use-react-router';
 
 const sortFiles = (files: FileObject[]): FileObject[] => {
     return files.sort((a, b) => a.name.localeCompare(b.name))
@@ -19,26 +22,40 @@ const sortFiles = (files: FileObject[]): FileObject[] => {
 };
 
 export default () => {
+    const [ error, setError ] = useState('');
     const [ loading, setLoading ] = useState(true);
     const { addError, clearFlashes } = useStoreActions((actions: Actions<ApplicationStore>) => actions.flashes);
     const { id } = ServerContext.useStoreState(state => state.server.data!);
     const { contents: files } = ServerContext.useStoreState(state => state.files);
     const { getDirectoryContents } = ServerContext.useStoreActions(actions => actions.files);
 
-    useEffect(() => {
-        setLoading(true);
+    const loadContents = () => {
+        setError('');
         clearFlashes();
-
+        setLoading(true);
         getDirectoryContents(window.location.hash)
             .then(() => setLoading(false))
             .catch(error => {
                 console.error(error.message, { error });
-                addError({ message: httpErrorToHuman(error), key: 'files' });
+                setError(httpErrorToHuman(error));
             });
+    };
+
+    useEffect(() => {
+        loadContents();
     }, []);
 
+    if (error) {
+        return (
+            <ServerError
+                message={error}
+                onRetry={() => loadContents()}
+            />
+        );
+    }
+
     return (
-        <div className={'my-10 mb-6'}>
+        <PageContentBlock>
             <FlashMessageRender byKey={'files'} className={'mb-4'}/>
             <React.Fragment>
                 <FileManagerBreadcrumbs/>
@@ -92,6 +109,6 @@ export default () => {
                         </React.Fragment>
                 }
             </React.Fragment>
-        </div>
+        </PageContentBlock>
     );
 };

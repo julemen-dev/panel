@@ -2,7 +2,7 @@ import React, { lazy, useEffect, useState } from 'react';
 import { ServerContext } from '@/state/server';
 import getFileContents from '@/api/server/files/getFileContents';
 import useRouter from 'use-react-router';
-import { Actions, useStoreActions, useStoreState } from 'easy-peasy';
+import { Actions, useStoreActions } from 'easy-peasy';
 import { ApplicationStore } from '@/state';
 import { httpErrorToHuman } from '@/api/http';
 import SpinnerOverlay from '@/components/elements/SpinnerOverlay';
@@ -12,10 +12,13 @@ import { useParams } from 'react-router';
 import FileNameModal from '@/components/server/files/FileNameModal';
 import Can from '@/components/elements/Can';
 import FlashMessageRender from '@/components/FlashMessageRender';
+import PageContentBlock from '@/components/elements/PageContentBlock';
+import ServerError from '@/components/screens/ServerError';
 
 const LazyAceEditor = lazy(() => import(/* webpackChunkName: "editor" */'@/components/elements/AceEditor'));
 
 export default () => {
+    const [ error, setError ] = useState('');
     const { action } = useParams();
     const { history, location: { hash } } = useRouter();
     const [ loading, setLoading ] = useState(action === 'edit');
@@ -30,12 +33,12 @@ export default () => {
     if (action !== 'new') {
         useEffect(() => {
             setLoading(true);
-            clearFlashes('files:view');
+            setError('');
             getFileContents(uuid, hash.replace(/^#/, ''))
                 .then(setContent)
                 .catch(error => {
                     console.error(error);
-                    addError({ key: 'files:view', message: httpErrorToHuman(error) });
+                    setError(httpErrorToHuman(error));
                 })
                 .then(() => setLoading(false));
         }, [ uuid, hash ]);
@@ -48,9 +51,10 @@ export default () => {
 
         setLoading(true);
         clearFlashes('files:view');
-        fetchFileContent().then(content => {
-            return saveFileContents(uuid, name || hash.replace(/^#/, ''), content);
-        })
+        fetchFileContent()
+            .then(content => {
+                return saveFileContents(uuid, name || hash.replace(/^#/, ''), content);
+            })
             .then(() => {
                 if (name) {
                     history.push(`/server/${id}/files/edit#/${name}`);
@@ -66,10 +70,30 @@ export default () => {
             .then(() => setLoading(false));
     };
 
+    if (error) {
+        return (
+            <ServerError
+                message={error}
+                onBack={() => history.goBack()}
+            />
+        );
+    }
+
     return (
-        <div className={'mt-10 mb-4'}>
+        <PageContentBlock>
             <FlashMessageRender byKey={'files:view'} className={'mb-4'}/>
             <FileManagerBreadcrumbs withinFileEditor={true} isNewFile={action !== 'edit'}/>
+            {(name || hash.replace(/^#/, '')).endsWith('.pteroignore') &&
+            <div className={'mb-4 p-4 border-l-4 bg-neutral-900 rounded border-cyan-400'}>
+                <p className={'text-neutral-300 text-sm'}>
+                    You're editing a <code className={'font-mono bg-black rounded py-px px-1'}>.pteroignore</code> file.
+                    Any files or directories listed in here will be excluded from backups. Wildcards are supported by
+                    using an asterisk (<code className={'font-mono bg-black rounded py-px px-1'}>*</code>). You can
+                    negate a prior rule by prepending an exclamation point
+                    (<code className={'font-mono bg-black rounded py-px px-1'}>!</code>).
+                </p>
+            </div>
+            }
             <FileNameModal
                 visible={modalVisible}
                 onDismissed={() => setModalVisible(false)}
@@ -104,6 +128,6 @@ export default () => {
                     </Can>
                 }
             </div>
-        </div>
+        </PageContentBlock>
     );
 };

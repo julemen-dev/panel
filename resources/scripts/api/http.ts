@@ -12,15 +12,23 @@ const http: AxiosInstance = axios.create({
 });
 
 http.interceptors.request.use(req => {
-    store.getActions().progress.startContinuous();
+    if (!req.url?.endsWith('/resources') && (req.url?.indexOf('_debugbar') || -1) < 0) {
+        store.getActions().progress.startContinuous();
+    }
 
     return req;
 });
 
 http.interceptors.response.use(resp => {
-    store.getActions().progress.setComplete();
+    if (!resp.request?.url?.endsWith('/resources') && (resp.request?.url?.indexOf('_debugbar') || -1) < 0) {
+        store.getActions().progress.setComplete();
+    }
 
     return resp;
+}, error => {
+    store.getActions().progress.setComplete();
+
+    throw error;
 });
 
 // If we have a phpdebugbar instance registered at this point in time go
