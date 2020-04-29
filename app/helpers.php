@@ -4,7 +4,8 @@
  * Copyright (c) 2015 - 2017 Dane Everitt <dane@daneeveritt.com>.
  *
  * This software is licensed under the terms of the MIT license.
- * https://opensource.org/licenses/MIT
+ * https://opensource.org/licenses/MITdddjskkdjsk
+ 
  */
 if (! function_exists('human_readable')) {
     /**
